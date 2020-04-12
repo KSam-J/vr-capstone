@@ -637,14 +637,6 @@
       <Project>{C540080A-BED7-978E-DDFC-EE09E5DBB722}</Project>
       <Name>Unity.Rider.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.TextMeshPro.csproj">
-      <Project>{07A21C90-D344-AE1A-8456-9910C203B41A}</Project>
-      <Name>Unity.TextMeshPro</Name>
-    </ProjectReference>
-    <ProjectReference Include="UnityEditor.UI.csproj">
-      <Project>{3BB3FA27-B9AA-7EC6-4E7C-EE51EC3271F7}</Project>
-      <Name>UnityEditor.UI</Name>
-    </ProjectReference>
     <ProjectReference Include="SteamVR_Input_Editor.csproj">
       <Project>{E6594F2C-2DC5-CB04-5892-01F5D49638B7}</Project>
       <Name>SteamVR_Input_Editor</Name>
@@ -657,16 +649,27 @@
       <Project>{BD231772-1CCA-A142-B2A7-FFDEBC0B66EE}</Project>
       <Name>SteamVR</Name>
     </ProjectReference>
-    <ProjectReference Include="SteamVR_Windows_EditorHelper.csproj">
-      <Project>{58A108A4-18E9-33FA-75FB-B906B95B871B}</Project>
-      <Name>SteamVR_Windows_EditorHelper</Name>
+    <ProjectReference Include="Unity.TextMeshPro.csproj">
+      <Project>{07A21C90-D344-AE1A-8456-9910C203B41A}</Project>
+      <Name>Unity.TextMeshPro</Name>
     </ProjectReference>
     <ProjectReference Include="SteamVR_Actions.csproj">
       <Project>{5C307B7E-977A-C9FF-456C-B0880147461A}</Project>
       <Name>SteamVR_Actions</Name>
     </ProjectReference>
+    <ProjectReference Include="SteamVR_Windows_EditorHelper.csproj">
+      <Project>{58A108A4-18E9-33FA-75FB-B906B95B871B}</Project>
+      <Name>SteamVR_Windows_EditorHelper</Name>
+    </ProjectReference>
+    <ProjectReference Include="UnityEditor.UI.csproj">
+      <Project>{3BB3FA27-B9AA-7EC6-4E7C-EE51EC3271F7}</Project>
+      <Name>UnityEditor.UI</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\ParsingJSON.cs" />
+    <Compile Include="Assets\Scripts\RESTFUL plugin\PositionAPI.cs" />
+    <Compile Include="Assets\Scripts\SimpleJSON.cs" />
     <Compile Include="Assets\VRTK\Examples\ExampleResources\SceneResources\[001 - Interactions] ControllerEvents\Scripts\VRTKExample_ControllerEventsDelegateListeners.cs" />
     <Compile Include="Assets\VRTK\Examples\ExampleResources\SceneResources\[002 - Pointers] StraightPointer\Scripts\VRTKExample_PointerObjectHighlighterActivator.cs" />
     <Compile Include="Assets\VRTK\Examples\ExampleResources\SceneResources\[003 - Pointers] BezierPointer\Scripts\VRTKExample_BezierPointerChanger.cs" />
