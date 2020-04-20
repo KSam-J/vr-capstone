@@ -26,6 +26,7 @@ public class LaterationScript : MonoBehaviour{
 		ancs[1] = new Anchor(Anchor2,1,Int64.Parse("f8c202cdc061c8bf",System.Globalization.NumberStyles.HexNumber));
 		ancs[2] = new Anchor(Anchor3,1,Int64.Parse("77da1470c2e3c8ab",System.Globalization.NumberStyles.HexNumber));
 		TAG_ID = Int64.Parse("98db0e5cae045b59",System.Globalization.NumberStyles.HexNumber);
+		Debug.Log("Tag initialized as "+TAG_ID);
 		//Set our current position to the object's current position.
 		currPos = new double[2] {this.transform.position[0],this.transform.position[2]};
 		//Read the test JSON file
@@ -35,6 +36,7 @@ public class LaterationScript : MonoBehaviour{
 		DataPoint newdata = Parser.grabData();
 		//If some new data is present, modify our distances as needed - otherwise ignore
 		if(newdata != null){
+			//Debug.Log("Non-null data found with tags "+newdata.getFirstId()+" and "+newdata.getSecondId());
 			//One of the two tags should be the tracked object
 			if(newdata.getFirstId() != TAG_ID && newdata.getSecondId() != TAG_ID){
 				return;

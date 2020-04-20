@@ -51,12 +51,12 @@ public class ParseScript : MonoBehaviour{
 		*/
 		//to test and not get overloaded with info, 1 json input per second
         count++;
-        if(count >= 50)
+        if(count >= 1)
         {
             count = 0;
-            Debug.Log("Running GetPos");
+            //Debug.Log("Running GetPos");
             StartCoroutine(GetPos());
-            Debug.Log("After GetPos");
+            //Debug.Log("After GetPos");
         }
     }
 
@@ -69,7 +69,7 @@ public class ParseScript : MonoBehaviour{
         
         yield return posInfoRequest.SendWebRequest();
         test = posInfoRequest.downloadHandler.text;
-        Debug.Log(test);
+        //Debug.Log(test);
 		readString(test);
 
         if (posInfoRequest.isNetworkError || posInfoRequest.isHttpError)
@@ -125,7 +125,7 @@ public class ParseScript : MonoBehaviour{
                         {
                             //1st tag
                             case TAG_SOURCE_ID:
-                                i += 2;
+                                i += 3;
                                 string tag1 = parseTag(words, i);
                                 i += 15;
 								dp.setFirstId(tag1);
@@ -134,7 +134,7 @@ public class ParseScript : MonoBehaviour{
 
                             //2nd tag
                             case TAG_DEST_ID:
-                                i += 2;                                
+                                i += 3;                                
                                 string tag2 = parseTag(words, i);
                                 i += 15;
 								dp.setSecondId(tag2);
@@ -165,11 +165,8 @@ public class ParseScript : MonoBehaviour{
 
             }
 
-			//For test server, remove if have time stamp
-			dataQueue.Enqueue(dp);
-
 			//If we have all four necessary pieces of data
-			if(dp.hasAll()){
+			if(dp.hasAllExceptTime()){
 				//Debug.Log("Adding new DataPoint");
 				//Add this DataPoint to the queue
 				dataQueue.Enqueue(dp);
@@ -181,7 +178,7 @@ public class ParseScript : MonoBehaviour{
 		firstTime = dataQueue.Peek().getTime();
 		startTime = DateTime.Now;
 		
-		Debug.Log("Finished enqueuing data");
+		//Debug.Log("Finished enqueuing data");
 	}
 	private string parseTag(string[] words, int index){
         string answer = "";
@@ -261,6 +258,10 @@ public class DataPoint{
 	
 	public bool hasAll(){
 		return datamap == 15;
+	}
+	
+	public bool hasAllExceptTime(){
+		return datamap/2 == 7;
 	}
 	
 	private void setMap(short val){
