@@ -4,195 +4,129 @@ using UnityEngine;
 using System;
 using System.Text.RegularExpressions;
 using UnityEngine.Networking;
-
+using System.IO;
 
 namespace latshare{
 
 public class ParseScript : MonoBehaviour{
-	private const string TAG_SOURCE_ID = "10001,";
-    private const string TAG_DEST_ID = "10002,";
-    private const string DIST_VAL_ID = "5700,";
-    private const string DIST_UNITS_ID = "5701,";
+	//Constants for parsing server data.
+	private const string TAG_SOURCE_ID = "10001";
+    private const string TAG_DEST_ID = "10002";
+    private const string DIST_VAL_ID = "5700";
+    private const string DIST_UNITS_ID = "5701";
 	
-	//Structures for Getting server data
-	public string testString;
-    private readonly string localURL = "localhost:5000/";
-    private int count;
-    private string test;
+	//Location of the Log File.
+	public string logFilePath;
+	
+	//URLs of the ranging hardware.
+    private readonly string[] URLS = {"http://40.122.33.65:8080/api/clients/c91c7641ed9ad451/3330/0/", //Tag
+		"http://40.122.33.65:8080/api/clients/ecee381f7777cc28/3330/0/",
+		"http://40.122.33.65:8080/api/clients/91a81be2b4e9d809/3330/0/",
+		"http://40.122.33.65:8080/api/clients/b7e81d56f671a601/3330/0/"};
+		
+	//Number of frames to pause between requests.
+	private readonly int NETWORK_PAUSE_FRAMES = 30;
+    private int frameCount = 0;
+	
+	//The factor to scale received distances by.
+	//Since distances are received in mm, dividing by 1000 makes each Unity unit equivalent to 1 meter.
+	public readonly double SCALING_FACTOR = 1.0/10.0;
 
-	//Structures for Parsed Data
+	//Structure for parsed data.
 	Queue<DataPoint> dataQueue = new Queue<DataPoint>();
-	private DateTime firstTime = DateTime.MinValue;
-	private DateTime startTime = DateTime.Now;
-	
-	public string fileName;
-	public bool mimicTime;
 	
     // Start is called before the first frame update
     void Start(){
-		if(fileName.Length > 0){
-			readJSON(fileName);
-		}
-
-		//default values go here
-        count = 0;
-        testString = "";
+		//Flush the log file.
+		LogFlush();
     }
 
+	
     // Update is called once per frame
     void Update()
     {
-		/*
-		//The following is how networked data would be implemented:
-		//Start with a string of data taken from the server
-		string datastring = "{JSON formatted data}";
-		//Then just pass that string to the readString method
-		readString(datastring);
-		*/
-		//to test and not get overloaded with info, 1 json input per second
-        count++;
-        if(count >= 1)
+		//Only send a request if we've waited long enough since last time.
+		frameCount++;
+        if(frameCount > NETWORK_PAUSE_FRAMES)
         {
-            count = 0;
-            //Debug.Log("Running GetPos");
+            frameCount = 0;
             StartCoroutine(GetPos());
-            //Debug.Log("After GetPos");
         }
     }
 
-	    IEnumerator GetPos()
+	IEnumerator GetPos()
     {
-        string PosURL = localURL + "data"; // actual url from base
-
-        UnityWebRequest posInfoRequest = UnityWebRequest.Get(PosURL);
-
-        
-        yield return posInfoRequest.SendWebRequest();
-        test = posInfoRequest.downloadHandler.text;
-        //Debug.Log(test);
-		readString(test);
-
-        if (posInfoRequest.isNetworkError || posInfoRequest.isHttpError)
-        {
-            Debug.LogError(posInfoRequest.error);
-            Debug.Log("EORROR");
-            yield break;
-        }
-		
+		//Iterate through the list of endpoint URLs we have
+		foreach(string URL in URLS){
+			//Create and yield a request to each of them for the coroutine
+			UnityWebRequest posInfoRequest = UnityWebRequest.Get(URL);
+			yield return posInfoRequest.SendWebRequest();
+			//If the request fails, display the error code - otherwise, parse it into the queue.
+			if (posInfoRequest.isNetworkError || posInfoRequest.isHttpError)
+			{
+				Debug.Log("Encountered an error while reading URL "+URL);
+				Debug.Log(posInfoRequest.error);
+				//Continue running - this error shouldn't stop the whole program.
+				yield break;
+			} else{
+				readString(posInfoRequest.downloadHandler.text);
+			}
+		}
     }
 	
 	public DataPoint grabData(){
-		if(dataQueue.Count > 0 && (!mimicTime || (dataQueue.Peek().getTime() - firstTime) <= (DateTime.Now - startTime))){
+		if(dataQueue.Count > 0){
 			return dataQueue.Dequeue();
 		} else{
 			return null;
 		}
 	}
-	
-	private void readJSON(string filename){
-		//Debug.Log("Reading file "+fileName);
-		System.IO.StreamReader file = new System.IO.StreamReader(filename);
-		readString(file.ReadToEnd());
-		file.Close();
-	}
 	private void readString(string datastring){
-		//Keep a datapoint
+		//Create a new datapoint
 		DataPoint dp = new DataPoint();
+
 		//split string into words array
-        string[] words = datastring.Split(new char[] { ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-      
-        for (int i = 0; i < words.Length; i++){
-            switch (words[i].Trim())
-            {
-                //time
-                case "{\"ts\":":
-                    i++;
-                    string strq = words[i];
-                    string strReplaceq = strq.Replace("\"", "").Trim();
-                    string strReplace1q = strReplaceq.Replace(",", "").Trim();
-					dp.setTime(strReplace1q);
-                    //Debug.Log(strReplace1q);
+        string[] term = datastring.Split(new char[] { ',', ':' }, StringSplitOptions.RemoveEmptyEntries);
+        for (int j = 0; j < term.Length; j++){
+            //Debug.Log(term[j]);
+            switch(term[j]){
+                case TAG_SOURCE_ID:
+                    string tag1 = term[j+2].Trim(new Char[] {'\"', '}'});
+                    dp.setFirstId(tag1);
                     break;
-
-                //resouces
-                case "\"resources\":":
-					
-                    bool done = false;
-                    while (!done)
-                    {
-                        i++;
-                        switch (words[i].Trim())
-                        {
-                            //1st tag
-                            case TAG_SOURCE_ID:
-                                i += 3;
-                                string tag1 = parseTag(words, i);
-                                i += 15;
-								dp.setFirstId(tag1);
-                                //Debug.Log(tag1);
-                                break;
-
-                            //2nd tag
-                            case TAG_DEST_ID:
-                                i += 3;                                
-                                string tag2 = parseTag(words, i);
-                                i += 15;
-								dp.setSecondId(tag2);
-                                //Debug.Log(tag2);
-                                break;
-
-                            //distance
-                            case DIST_VAL_ID:
-                                i += 2;
-                                string dist = words[i].Trim();
-                                //Debug.Log(dist);
-                                string strReplacew = dist.Replace("}", "").Trim();
-                                string strReplace1w = strReplacew.Replace(",", "").Trim();
-								dp.setDistance(strReplace1w);
-                                //Debug.Log(distNum);
-                                break;
-                            //unit
-                            case DIST_UNITS_ID:
-                                done = true;
-                                break;
-                        }
-                    }
+                case TAG_DEST_ID:
+                    string tag2 = term[j+2].Trim(new Char[] {'\"', '}'});
+                    dp.setSecondId(tag2);
                     break;
-
-                //all other symbols
-                default:
+                case DIST_VAL_ID:
+                    string distStr = term[j+2].Trim(new Char[] {'}'});
+                    //float distNum = float.Parse(distStr);
+                    dp.setDistance(distStr,SCALING_FACTOR);
                     break;
-
             }
+        }
 
-			//If we have all four necessary pieces of data
-			if(dp.hasAllExceptTime()){
-				//Debug.Log("Adding new DataPoint");
-				//Add this DataPoint to the queue
-				dataQueue.Enqueue(dp);
-				//Reset the one we're currently working on
-				dp = new DataPoint();
-			}
-        }
+		//If we have all four necessary pieces of data
+		if(dp.hasAllExceptTime()){
+			//Log this distance to the log file.
+			LogLine(dp.getDistance().ToString());
+			//Add this DataPoint to the queue
+			dataQueue.Enqueue(dp);
+		}
 		
-		firstTime = dataQueue.Peek().getTime();
-		startTime = DateTime.Now;
-		
-		//Debug.Log("Finished enqueuing data");
 	}
-	private string parseTag(string[] words, int index){
-        string answer = "";
-        for (int j = 0; j < 16; j++){
-            answer += words[index + j]
-				.Replace("\"", "")
-				.Replace(",", "")
-				.Replace("[", "")
-				.Replace("]", "")
-				.Replace("}", "")
-				.Trim();
-        }
-        return answer;
-    }
+	private void LogFlush(){
+		if(logFilePath != ""){
+			File.Delete(logFilePath);
+		}
+	}
+	private void LogLine(string line){
+		if(logFilePath != ""){
+			StreamWriter writer = new StreamWriter(logFilePath,true);
+			writer.WriteLine(line);
+			writer.Close();
+		}
+	}
 }
 
 /**
@@ -230,6 +164,9 @@ public class DataPoint{
 	public long getFirstId(){
 		return firstDeviceId;
 	}
+	public string getFirstIdHex(){
+		return firstDeviceId.ToString("x16");
+	}
 	public bool hasFirstId(){
 		return getMap(2);
 	}
@@ -241,12 +178,15 @@ public class DataPoint{
 	public long getSecondId(){
 		return secondDeviceId;
 	}
+	public string getSecondIdHex(){
+		return secondDeviceId.ToString("x16");
+	}
 	public bool hasSecondId(){
 		return getMap(4);
 	}
 	
-	public void setDistance(string diststring){
-		distance = double.Parse(diststring)/10.0;
+	public void setDistance(string diststring,double scalar){
+		distance = double.Parse(diststring)*scalar;
 		setMap(8);
 	}
 	public double getDistance(){
